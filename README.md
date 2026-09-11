@@ -1,4 +1,14 @@
-﻿# PhotoMap Explorer 🗺️📸
+---
+title: PhotoMap Explorer
+emoji: 🗺️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+# PhotoMap Explorer 🗺️📸
 
 A modern web application to map your photos (JPEG, PNG, HEIC, TIFF, and camera RAW files) on an interactive map, take map screenshots, and create cinematic **YouTube 4K travel flight videos**.
 

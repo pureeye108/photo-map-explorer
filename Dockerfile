@@ -1,4 +1,4 @@
-﻿FROM python:3.12-slim
+FROM python:3.12-slim
 
 # Install system dependencies (ffmpeg, libraw, opencv dependencies)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -17,10 +17,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY . .
 
-# Ensure upload and cache directories exist
-RUN mkdir -p static/uploads/tile_cache static/uploads/videos
+# Ensure upload and cache directories exist with full write permissions (for Hugging Face Spaces UID 1000)
+RUN mkdir -p static/uploads/tile_cache static/uploads/videos && \
+    chmod -R 777 static/uploads
 
-ENV PORT=5000
-EXPOSE 5000
+ENV PORT=7860
+EXPOSE 7860
 
-CMD ["sh", "-c", "gunicorn -w 2 -b 0.0.0.0:${PORT:-5000} app:app --timeout 180"]
+CMD ["sh", "-c", "gunicorn -w 2 -b 0.0.0.0:${PORT:-7860} app:app --timeout 180"]
+
