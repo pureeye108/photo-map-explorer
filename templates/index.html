@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhotoMap Explorer - GPS & Landmark Mapping</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet & MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- html2canvas for Map Screenshots -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col bg-slate-900 text-slate-100">
+
+  <!-- TOP APP BAR -->
+  <header class="h-16 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 z-30 px-4 flex items-center justify-between shadow-lg">
+    <!-- Brand -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+        <i class="fa-solid fa-map-location-dot text-white text-lg"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight tracking-wide flex items-center gap-2">
+          <span>PhotoMap</span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30">RAW & JPEG</span>
+        </h1>
+        <p class="text-xs text-slate-400">GPS & AI Landmark Visual Mapper</p>
+      </div>
+    </div>
+
+    <!-- View Switcher Tabs -->
+    <div class="flex items-center gap-1 bg-slate-800/90 p-1 rounded-xl border border-slate-700/70">
+      <button onclick="switchAppTab('map')" id="tab-btn-map" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow flex items-center gap-1.5">
+        <i class="fa-solid fa-map"></i> <span>Map Explorer</span>
+      </button>
+      <button onclick="switchAppTab('video')" id="tab-btn-video" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-700 flex items-center gap-1.5">
+        <i class="fa-solid fa-video text-amber-400"></i>
+        <span>4K Video Tour</span>
+        <span class="bg-amber-500/20 text-amber-400 text-[9px] px-1.5 py-0.2 rounded font-bold border border-amber-500/30">4K</span>
+      </button>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="hidden md:flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60 text-xs">
+      <button onclick="filterPhotos('all')" id="stat-all" class="px-3 py-1 rounded-lg bg-slate-700 text-white font-medium transition hover:bg-slate-600">
+        Total: <span id="count-all">0</span>
+      </button>
+      <button onclick="filterPhotos('gps')" id="stat-gps" class="px-3 py-1 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition flex items-center gap-1.5 font-medium">
+        <i class="fa-solid fa-satellite"></i> GPS: <span id="count-gps">0</span>
+      </button>
+      <button onclick="filterPhotos('landmark')" id="stat-landmark" class="px-3 py-1 rounded-lg text-amber-400 hover:bg-amber-500/20 transition flex items-center gap-1.5 font-medium">
+        <i class="fa-solid fa-triangle-exclamation"></i> Landmark: <span id="count-landmark">0</span>
+      </button>
+      <button onclick="filterPhotos('none')" id="stat-none" class="px-3 py-1 rounded-lg text-slate-400 hover:bg-slate-700 transition flex items-center gap-1.5 font-medium">
+        <i class="fa-solid fa-question"></i> Unlocated: <span id="count-none">0</span>
+      </button>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center gap-2">
+      <!-- Hidden file inputs -->
+      <input type="file" id="file-input" multiple accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.tiff,.tif,.cr2,.cr3,.nef,.arw,.dng,.orf,.rw2,.pef,.raf" class="hidden">
+      <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden">
+
+      <!-- Upload dropdown / button -->
+      <div class="relative group">
+        <button onclick="document.getElementById('file-input').click()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span>Upload</span>
+          <button onclick="toggleUploadMenu(event)" class="border-l border-emerald-500/50 pl-1.5 -mr-1 hover:text-emerald-100">
+            <i class="fa-solid fa-chevron-down text-[10px]"></i>
+          </button>
+        </button>
+        <!-- Dropdown menu -->
+        <div id="upload-menu" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl py-1 text-sm z-50">
+          <button onclick="document.getElementById('file-input').click(); hideUploadMenu();" class="w-full px-4 py-2 text-left hover:bg-slate-700 flex items-center gap-2.5 text-slate-200">
+            <i class="fa-regular fa-images text-emerald-400"></i> Select Files (JPEG, RAW)
+          </button>
+          <button onclick="document.getElementById('folder-input').click(); hideUploadMenu();" class="w-full px-4 py-2 text-left hover:bg-slate-700 flex items-center gap-2.5 text-slate-200">
+            <i class="fa-regular fa-folder-open text-amber-400"></i> Select Folder
+          </button>
+        </div>
+      </div>
+
+      <!-- Take Screenshot Button -->
+      <button onclick="captureMapScreenshot()" title="Take Screenshot of Map & Photos" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 text-xs font-semibold">
+        <i class="fa-solid fa-camera text-emerald-400"></i>
+        <span class="hidden sm:inline">Screenshot</span>
+      </button>
+
+      <!-- Batch Landmark Detect -->
+      <button id="btn-batch-landmark" onclick="batchDetectLandmarks()" class="bg-amber-600/90 hover:bg-amber-500 text-white px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-amber-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span class="hidden lg:inline">Detect Landmarks</span>
+      </button>
+
+      <!-- Export GeoJSON -->
+      <button onclick="exportGeoJSON()" title="Export GeoJSON" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+        <i class="fa-solid fa-download text-xs"></i>
+      </button>
+
+      <!-- Settings -->
+      <button onclick="openSettingsModal()" title="Settings" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+        <i class="fa-solid fa-gear text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT (MAP + FLOATING CONTROLS + VIDEO STUDIO SIDEBAR) -->
+  <main class="flex-1 relative overflow-hidden flex">
+    <!-- VIDEO TOUR STUDIO SIDEBAR (Hidden by default, shown in 'video' tab) -->
+    <aside id="video-sidebar" class="hidden w-96 bg-slate-900/95 backdrop-blur-md border-r border-slate-800 z-20 flex flex-col shadow-2xl h-full flex-shrink-0">
+      <!-- Sidebar Header -->
+      <div class="p-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h2 class="text-xs font-bold text-white flex items-center gap-1.5">
+            <i class="fa-solid fa-clapperboard text-amber-400"></i> 4K Video Tour Studio
+          </h2>
+          <p class="text-[10px] text-slate-400">Build cinematic map flights ready for YouTube</p>
+        </div>
+        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">3840×2160</span>
+      </div>
+
+      <!-- Quick Tour Actions -->
+      <div class="p-2.5 border-b border-slate-800/80 bg-slate-900/60 flex items-center gap-1.5 text-xs">
+        <button onclick="autoGenerateTourFromPhotos()" class="flex-1 py-1.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center justify-center gap-1 shadow-sm text-xs" title="Auto-build sequence from mapped photos">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Tour
+        </button>
+        <button onclick="addCurrentViewToTour()" class="py-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition flex items-center gap-1 text-xs" title="Add current map center & zoom">
+          <i class="fa-solid fa-plus text-amber-400"></i> Add View
+        </button>
+        <button onclick="clearTourWaypoints()" title="Clear all scenes" class="p-1.5 rounded-xl bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 border border-slate-700 transition text-xs">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+      </div>
+
+      <!-- Storyboard Timeline List -->
+      <div class="flex-1 overflow-y-auto p-2.5 space-y-2 scrollbar-thin" id="video-storyboard-list">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Video Settings & Render Panel -->
+      <div class="p-3 border-t border-slate-800 bg-slate-900/90 space-y-2 text-xs">
+        <div>
+          <label class="block text-[10px] font-semibold text-slate-300 mb-0.5">Video Tour Title</label>
+          <input type="text" id="video-title-input" value="My Travel Map Journey" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-semibold text-slate-300 mb-0.5">Resolution</label>
+            <select id="video-resolution-select" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none focus:border-amber-500">
+              <option value="4k" selected>YouTube 4K (3840×2160)</option>
+              <option value="1080p">Full HD (1920×1080)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-semibold text-slate-300 mb-0.5">Framerate</label>
+            <select id="video-fps-select" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none focus:border-amber-500">
+              <option value="30" selected>30 FPS (Standard)</option>
+              <option value="60">60 FPS (Ultra Smooth)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Render & Preview Buttons -->
+        <div class="flex gap-2 pt-1">
+          <button id="btn-preview-tour" onclick="toggleTourPreview()" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold flex items-center justify-center gap-1.5 transition text-xs">
+            <i class="fa-solid fa-play text-amber-400"></i> <span>Preview Flight</span>
+          </button>
+          <button id="btn-render-video" onclick="startRenderVideo()" class="flex-1 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-amber-600/20 transition text-xs">
+            <i class="fa-solid fa-film"></i> <span>Render 4K MP4</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Map Canvas Wrapper -->
+    <div class="flex-1 relative h-full overflow-hidden">
+      <!-- Leaflet Map Container -->
+      <div id="map" class="w-full h-full z-10"></div>
+
+      <!-- Map Tile Layer Selector (Floating Top-Right) -->
+      <div class="absolute top-4 right-4 z-20 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-xl flex gap-1 text-xs">
+        <button onclick="setMapLayer('osm')" id="layer-osm" class="px-2.5 py-1.5 rounded-lg bg-slate-700 text-white font-medium transition">
+          Street
+        </button>
+        <button onclick="setMapLayer('dark')" id="layer-dark" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 transition">
+          Dark
+        </button>
+        <button onclick="setMapLayer('satellite')" id="layer-satellite" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 transition">
+          Satellite
+        </button>
+      </div>
+
+      <!-- Manual Placement Banner (Floating Top-Center) -->
+      <div id="placement-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-blue-600 text-white px-5 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-blue-400/50 animate-bounce">
+        <i class="fa-solid fa-crosshairs text-lg"></i>
+        <span class="text-sm font-medium">Click anywhere on the map to place photo: <strong id="placement-filename">photo.jpg</strong></span>
+        <button onclick="cancelManualPlacement()" class="bg-white/20 hover:bg-white/30 text-xs px-2.5 py-1 rounded-lg ml-2 transition">
+          Cancel
+        </button>
+      </div>
+
+      <!-- Tour Preview Banner (Floating Top-Center in Preview Mode) -->
+      <div id="preview-tour-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-amber-600 text-white px-5 py-2 rounded-2xl shadow-2xl flex items-center gap-3 border border-amber-400/50">
+        <i class="fa-solid fa-circle-play text-lg animate-pulse"></i>
+        <span class="text-xs font-semibold">Playing Tour Preview: <span id="preview-tour-step">Scene 1</span></span>
+        <button onclick="stopTourPreview()" class="bg-black/30 hover:bg-black/40 text-xs px-2.5 py-1 rounded-lg ml-2 font-medium transition">
+          Stop Preview
+        </button>
+      </div>
+
+      <!-- Upload / Processing Progress Notification -->
+      <div id="progress-toast" class="hidden absolute top-4 left-4 z-30 bg-slate-900/95 backdrop-blur-md p-4 rounded-2xl border border-slate-700 shadow-2xl w-80">
+        <div class="flex items-center justify-between mb-2">
+          <span id="progress-title" class="text-xs font-semibold text-emerald-400 flex items-center gap-2">
+            <i class="fa-solid fa-spinner fa-spin"></i> Processing Photos...
+          </span>
+          <span id="progress-percent" class="text-xs text-slate-400">0%</span>
+        </div>
+        <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+          <div id="progress-bar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-0 transition-all duration-300"></div>
+        </div>
+        <p id="progress-desc" class="text-[11px] text-slate-400 mt-1.5 truncate">Extracting EXIF & RAW metadata...</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- BOTTOM PHOTO TRAY (COLLAPSIBLE) -->
+  <section id="photo-tray" class="bg-slate-900/95 backdrop-blur-md border-t border-slate-800 z-20 flex flex-col transition-all duration-300 h-64">
+    <!-- Tray Header -->
+    <div class="h-10 px-4 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/60 text-xs text-slate-400">
+      <div class="flex items-center gap-4">
+        <span class="font-semibold text-slate-200 flex items-center gap-2">
+          <i class="fa-solid fa-images text-emerald-400"></i> Photo Gallery
+        </span>
+        <span class="text-slate-600">|</span>
+        <!-- Filter Pills in Tray -->
+        <div class="flex items-center gap-1.5">
+          <button onclick="filterPhotos('all')" class="tray-filter active px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-200 bg-slate-800" data-filter="all">All</button>
+          <button onclick="filterPhotos('gps')" class="tray-filter px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200" data-filter="gps">GPS Verified</button>
+          <button onclick="filterPhotos('landmark')" class="tray-filter px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200" data-filter="landmark">Estimated Landmark</button>
+          <button onclick="filterPhotos('none')" class="tray-filter px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200" data-filter="none">Unlocated</button>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="clearAllPhotos()" class="text-red-400 hover:text-red-300 transition flex items-center gap-1 text-xs">
+          <i class="fa-regular fa-trash-can"></i> Clear All
+        </button>
+        <button onclick="togglePhotoTray()" id="btn-toggle-tray" class="text-slate-400 hover:text-slate-200 p-1">
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Horizontal Cards Strip -->
+    <div id="cards-container" class="flex-1 p-3 overflow-x-auto overflow-y-hidden flex items-center gap-3.5 scrollbar-thin">
+      <!-- Empty State -->
+      <div id="empty-state" class="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-2 select-none">
+        <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-600"></i>
+        <p class="text-sm">Drag & drop photos here, or click <strong>Upload Photos</strong></p>
+        <p class="text-xs text-slate-600">Supports JPEG, RAW (CR2, NEF, ARW, DNG, RAF), PNG, HEIC</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DRAG AND DROP FULLSCREEN OVERLAY -->
+  <div id="drag-drop-overlay" class="drag-overlay fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 hidden flex flex-col items-center justify-center p-8 border-4 border-dashed border-emerald-500 m-4 rounded-3xl">
+    <div class="w-24 h-24 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-4xl mb-4 animate-bounce">
+      <i class="fa-solid fa-images"></i>
+    </div>
+    <h2 class="text-2xl font-bold text-white mb-2">Drop your photos here</h2>
+    <p class="text-slate-400 text-sm">Drop JPEG, RAW, PNG, or HEIC files to instantly map their locations</p>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-emerald-400"></i> Application Settings
+        </h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <!-- Gemini API Key -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">
+            Google Gemini API Key <span class="text-emerald-400 font-normal">(Optional for Automated AI Vision)</span>
+          </label>
+          <div class="relative">
+            <input type="password" id="input-gemini-key" placeholder="Leave empty for free no-API mode..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+            <button onclick="togglePasswordVisibility('input-gemini-key')" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200">
+              <i class="fa-regular fa-eye text-xs"></i>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+            <strong>No API key required!</strong> You can search and place any landmark for free without an API key. 
+            If you want Gemini to automatically inspect image pixels, you can optionally enter a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-emerald-400 underline hover:text-emerald-300">Google AI Studio</a>.
+          </p>
+        </div>
+
+        <!-- Auto-detect toggle -->
+        <div class="flex items-center justify-between p-3 bg-slate-800/60 rounded-xl border border-slate-700/60">
+          <div>
+            <span class="block text-xs font-semibold text-slate-200">Auto-detect landmarks on upload</span>
+            <span class="block text-[11px] text-slate-400">Automatically run AI on unlocated photos when uploaded</span>
+          </div>
+          <input type="checkbox" id="toggle-autodetect" class="w-4 h-4 text-emerald-600 rounded bg-slate-700 border-slate-600 focus:ring-0">
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-800">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition">
+          Cancel
+        </button>
+        <button onclick="saveSettings()" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition">
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ZERO-API LANDMARK FINDER MODAL -->
+  <div id="landmark-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm shadow-sm">
+            <i class="fa-solid fa-landmark"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white leading-tight">Locate Landmark or Place</h3>
+            <p class="text-[11px] text-emerald-400 font-medium">100% Free &bull; Zero API Key Needed</p>
+          </div>
+        </div>
+        <button onclick="closeLandmarkModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <!-- Photo preview chip -->
+      <div class="flex items-center gap-3 bg-slate-800/60 p-2 rounded-xl border border-slate-700/60 mb-3">
+        <img id="lm-modal-thumb" src="" alt="Thumbnail" class="w-12 h-12 rounded-lg object-cover bg-slate-950 border border-slate-700">
+        <div class="overflow-hidden flex-1">
+          <h4 id="lm-modal-filename" class="text-xs font-semibold text-slate-100 truncate">photo.jpg</h4>
+          <p class="text-[10px] text-amber-400 mt-0.5 flex items-center gap-1">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Will be plotted with an <strong>Estimated Landmark</strong> warning</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Search Box -->
+      <div class="mb-3">
+        <label class="block text-xs font-semibold text-slate-300 mb-1">
+          Search Landmark, Site, or City:
+        </label>
+        <div class="relative">
+          <input type="text" id="lm-search-input" placeholder="e.g. Eiffel Tower, Colosseum, Big Ben, Taj Mahal, Kyoto..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-8 pr-16 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-500"></i>
+          <button onclick="executeLandmarkSearch()" class="absolute right-1 top-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition">
+            Search
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Chips -->
+      <div class="mb-3">
+        <span class="block text-[10px] font-semibold text-slate-400 mb-1">Popular Quick Picks:</span>
+        <div class="flex flex-wrap gap-1">
+          <button onclick="quickPickLandmark('Eiffel Tower, Paris')" class="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-slate-300 transition">🗼 Eiffel Tower</button>
+          <button onclick="quickPickLandmark('Colosseum, Rome')" class="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-slate-300 transition">🏛️ Colosseum</button>
+          <button onclick="quickPickLandmark('Statue of Liberty, New York')" class="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-slate-300 transition">🗽 Statue of Liberty</button>
+          <button onclick="quickPickLandmark('Big Ben, London')" class="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-slate-300 transition">🏰 Big Ben</button>
+          <button onclick="quickPickLandmark('Taj Mahal, India')" class="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-slate-300 transition">🕌 Taj Mahal</button>
+          <button onclick="quickPickLandmark('Golden Gate Bridge, San Francisco')" class="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-slate-300 transition">🌉 Golden Gate</button>
+          <button onclick="quickPickLandmark('Sydney Opera House')" class="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-slate-300 transition">⛵ Sydney Opera</button>
+          <button onclick="quickPickLandmark('Kyoto, Japan')" class="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] text-slate-300 transition">⛩️ Kyoto</button>
+        </div>
+      </div>
+
+      <!-- Search Results Box -->
+      <div class="flex-1 overflow-y-auto min-h-[100px] max-h-[160px] border border-slate-800 rounded-xl p-2 bg-slate-950/40">
+        <div id="lm-search-loading" class="hidden text-center py-5 text-slate-400 text-xs">
+          <i class="fa-solid fa-spinner fa-spin mr-1"></i> Searching OpenStreetMap...
+        </div>
+        <div id="lm-search-empty" class="text-center py-5 text-slate-500 text-xs">
+          Search a place or click a quick pick above.
+        </div>
+        <div id="lm-search-results" class="space-y-1.5 hidden">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div class="mt-3 pt-3 border-t border-slate-800 flex justify-between items-center text-xs">
+        <button onclick="startManualPlacementFromModal()" class="text-blue-400 hover:text-blue-300 flex items-center gap-1.5">
+          <i class="fa-solid fa-crosshairs"></i> Or pick point on map
+        </button>
+        <button onclick="closeLandmarkModal()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX MODAL -->
+  <div id="lightbox-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col md:flex-row">
+    <!-- Image View -->
+    <div class="flex-1 relative flex items-center justify-center p-4 overflow-hidden">
+      <img id="lightbox-img" src="" alt="Full view" class="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-all">
+      
+      <!-- Nav Arrows -->
+      <button onclick="navigateLightbox(-1)" class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/70 hover:bg-slate-800 text-white flex items-center justify-center text-xl transition border border-slate-700">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <button onclick="navigateLightbox(1)" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/70 hover:bg-slate-800 text-white flex items-center justify-center text-xl transition border border-slate-700">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+
+      <!-- Close Button (Mobile / Top) -->
+      <button onclick="closeLightbox()" class="absolute top-4 right-4 md:hidden w-10 h-10 rounded-full bg-slate-900/80 text-white flex items-center justify-center text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Metadata Sidebar -->
+    <div class="w-full md:w-96 bg-slate-900 border-l border-slate-800 p-6 flex flex-col justify-between overflow-y-auto">
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <span id="lb-format-badge" class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-emerald-400 border border-slate-700">JPEG</span>
+          <button onclick="closeLightbox()" class="hidden md:block text-slate-400 hover:text-white p-1">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <h3 id="lb-filename" class="text-base font-bold text-white mb-2 break-all">DSC_0001.JPG</h3>
+
+        <!-- Status & Warning Badge -->
+        <div id="lb-status-box" class="p-3 rounded-xl mb-4 text-xs">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- EXIF Details List -->
+        <div class="space-y-2.5 text-xs text-slate-300">
+          <div class="flex justify-between py-1 border-b border-slate-800">
+            <span class="text-slate-400">Date & Time</span>
+            <span id="lb-date" class="font-medium">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800">
+            <span class="text-slate-400">Location</span>
+            <span id="lb-location" class="font-medium text-right max-w-[200px] truncate">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800">
+            <span class="text-slate-400">Coordinates</span>
+            <span id="lb-coords" class="font-mono text-emerald-400">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800">
+            <span class="text-slate-400">Camera</span>
+            <span id="lb-camera" class="font-medium">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800">
+            <span class="text-slate-400">Lens</span>
+            <span id="lb-lens" class="font-medium text-right max-w-[200px] truncate">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-800">
+            <span class="text-slate-400">Exposure</span>
+            <span id="lb-exposure" class="font-mono">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="mt-6 space-y-2 pt-4 border-t border-slate-800">
+        <button id="lb-btn-locate" onclick="panToActivePhoto()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-location-crosshairs"></i> Pan to Map Pin
+        </button>
+        <button id="lb-btn-detect" onclick="detectLandmarkForActive()" class="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Run AI Landmark Detection
+        </button>
+        <button id="lb-btn-manual" onclick="startManualPlacementForActive()" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-map-pin"></i> Set Location on Map
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREENSHOT PREVIEW MODAL -->
+  <div id="screenshot-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-5 shadow-2xl flex flex-col max-h-[92vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-camera"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Map & Photo Locations Snapshot</h3>
+            <p class="text-[11px] text-slate-400">Export high-resolution map snapshot</p>
+          </div>
+        </div>
+        <button onclick="closeScreenshotModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <!-- Screenshot Preview Canvas/Image -->
+      <div class="flex-1 overflow-hidden bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center p-2 min-h-[260px] max-h-[420px]">
+        <img id="screenshot-preview-img" src="" alt="Screenshot" class="max-h-full max-w-full object-contain rounded shadow-lg">
+      </div>
+
+      <!-- Options & Title -->
+      <div class="mt-3 space-y-2 text-xs">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Overlay Title (Optional)</label>
+          <div class="flex gap-2">
+            <input type="text" id="screenshot-title-input" placeholder="e.g. My Photo Map Journey 2024" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+            <button onclick="applyScreenshotTitle()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition">
+              Apply
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs">
+        <button onclick="copyScreenshotToClipboard()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold flex items-center gap-1.5 transition">
+          <i class="fa-regular fa-copy text-emerald-400"></i> Copy to Clipboard
+        </button>
+        <div class="flex gap-2">
+          <button onclick="closeScreenshotModal()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition">
+            Close
+          </button>
+          <button onclick="downloadScreenshot('png')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition">
+            <i class="fa-solid fa-download"></i> Download PNG
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEO RENDER & PLAYER MODAL -->
+  <div id="video-render-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 shadow-2xl flex flex-col max-h-[92vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-clapperboard"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>YouTube 4K Map Video Tour</span>
+              <span class="px-2 py-0.2 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">3840×2160</span>
+            </h3>
+            <p id="video-modal-status-text" class="text-[11px] text-slate-400">Rendering 4K MP4 with cinematic camera flight...</p>
+          </div>
+        </div>
+        <button onclick="closeVideoRenderModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <!-- Video Progress Area (during rendering) -->
+      <div id="video-rendering-box" class="py-8 flex flex-col items-center justify-center text-center space-y-4">
+        <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-2xl animate-pulse shadow-lg shadow-amber-500/10">
+          <i class="fa-solid fa-film"></i>
+        </div>
+        <div>
+          <h4 id="video-progress-title" class="text-base font-bold text-white mb-1">Rendering 4K Video Frames...</h4>
+          <p id="video-progress-details" class="text-xs text-slate-400 font-mono">Initializing FFmpeg 4K stream (3840x2160)...</p>
+        </div>
+        <!-- Progress Bar -->
+        <div class="w-full max-w-md bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700">
+          <div id="video-progress-bar" class="h-full bg-gradient-to-r from-amber-500 to-orange-500 w-0 transition-all duration-300"></div>
+        </div>
+        <span id="video-progress-percentage" class="text-xs font-bold text-amber-400">0%</span>
+      </div>
+
+      <!-- Video Completed Area (player & download) -->
+      <div id="video-completed-box" class="hidden flex-1 flex flex-col space-y-3 overflow-hidden">
+        <div class="flex-1 bg-black rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center max-h-[440px]">
+          <video id="video-player-element" controls class="w-full h-full max-h-[440px] rounded-xl object-contain">
+            <source id="video-player-source" src="" type="video/mp4">
+          </video>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-3 text-[11px] text-slate-300">
+            <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check-circle mr-1"></i> Render Completed</span>
+            <span>&bull;</span>
+            <span class="font-mono text-slate-300">3840 &times; 2160 UHD</span>
+            <span>&bull;</span>
+            <span>H.264 / 30fps</span>
+          </div>
+          <a id="video-download-btn" href="#" download="PhotoMap_Tour_4K.mp4" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold flex items-center gap-2 shadow-lg shadow-amber-600/30 transition text-xs">
+            <i class="fa-solid fa-download"></i> Download 4K Video (.mp4)
+          </a>
+        </div>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-800 flex justify-end text-xs">
+        <button onclick="closeVideoRenderModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition font-medium">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet & MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- Application Logic -->
+  <script src="/static/js/app.js?v=2.0"></script>
+</body>
+</html>

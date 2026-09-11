@@ -1,0 +1,157 @@
+﻿/* Base & Layout */
+:root {
+  --color-gps: #10b981;
+  --color-landmark: #f59e0b;
+  --color-manual: #3b82f6;
+  --color-none: #6b7280;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+}
+
+/* Custom Marker Pins */
+.custom-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.custom-pin:hover {
+  transform: scale(1.2) translateY(-4px);
+  z-index: 9999 !important;
+}
+
+.pin-bubble {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  background-color: #1f2937;
+}
+
+.pin-bubble.gps {
+  border-color: #10b981;
+}
+
+.pin-bubble.landmark {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35), 0 6px 16px rgba(0,0,0,0.4);
+}
+
+.pin-bubble.manual {
+  border-color: #3b82f6;
+}
+
+.pin-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.pin-badge.gps {
+  background-color: #10b981;
+}
+
+.pin-badge.landmark {
+  background-color: #f59e0b;
+  animation: pulse-ring 2s infinite;
+}
+
+.pin-badge.manual {
+  background-color: #3b82f6;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+/* Custom Popup */
+.leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28) !important;
+  background: #ffffff !important;
+  max-width: 380px !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+  width: 340px !important;
+}
+
+.leaflet-popup-tip {
+  background: #ffffff !important;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.8);
+}
+
+/* Photo Gallery Cards */
+.photo-card {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.photo-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px -3px rgba(0, 0, 0, 0.15);
+}
+
+.photo-card.active {
+  ring-width: 3px;
+  --tw-ring-color: #3b82f6;
+}
+
+/* Drag and Drop Zone active */
+.drag-overlay {
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+/* Crosshair mode for placing pin */
+.placement-crosshair {
+  cursor: crosshair !important;
+}
+.placement-crosshair .leaflet-interactive {
+  cursor: crosshair !important;
+}
