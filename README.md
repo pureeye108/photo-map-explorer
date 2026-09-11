@@ -12,7 +12,11 @@ pinned: false
 
 A modern web application to map your photos (JPEG, PNG, HEIC, TIFF, and camera RAW files) on an interactive map, take map screenshots, and create cinematic **YouTube 4K travel flight videos**.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/pureeye108/photo-map-explorer)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live%20Showcase-3b82f6?logo=github)](https://pureeye108.github.io/photo-map-explorer/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
+**[🌐 Visit the Live Showcase Website](https://pureeye108.github.io/photo-map-explorer/)**
 
 ---
 
@@ -63,18 +67,25 @@ python app.py
 
 ## Deploying to the Web (Free)
 
-### Option A: 1-Click Deploy on Render.com (Recommended)
-1. Push this repository to your GitHub account (`pureeye108`).
-2. Go to [Render.com](https://render.com) and click **New +** $\rightarrow$ **Web Service**.
-3. Select your repository.
-4. Render will automatically detect the `Dockerfile` and `render.yaml`.
-5. Click **Create Web Service**! You'll get a free live URL (e.g. `https://photomap-explorer.onrender.com`).
+### 1-Click Deploy on Render.com (Recommended)
+Anyone can deploy their own instance with 1 click:
 
-### Option B: Deploy on Hugging Face Spaces (100% Free with Docker)
-1. Go to [Hugging Face Spaces](https://huggingface.co/new-space).
-2. Choose **Docker** as the Space SDK.
-3. Push or connect your GitHub repository.
-4. Your web app is immediately live with HTTPS!
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/pureeye108/photo-map-explorer)
 
-### Option C: Railway / Fly.io / Koyeb
-Simply connect your GitHub repository and Railway/Fly.io will build using the included `Dockerfile` and `Procfile`.
+1. Click the **Deploy to Render** button above.
+2. Sign in to Render with your GitHub account.
+3. Render automatically detects `render.yaml` and `Dockerfile`, builds FFmpeg, and provides a free HTTPS web link!
+
+---
+
+## Activating GitHub Pages Showcase
+
+This repository includes a showcase website in `/docs`:
+1. Go to your GitHub repository: **Settings** $\rightarrow$ **Pages** (on the left menu).
+2. Under **Build and deployment** $\rightarrow$ **Branch**:
+   - Select **`main`**
+   - Select folder **`/docs`**
+3. Click **Save**.
+4. Your showcase page will be published at:  
+   **`https://pureeye108.github.io/photo-map-explorer/`**
+
